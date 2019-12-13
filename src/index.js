@@ -22,7 +22,7 @@ app.use((req, res, next) => {
     res.header('Access-Control-Allow-Methods', 'GET, PUT, POST, DELETE, OPTIONS, PATCH');
     res.header(
       'Access-Control-Allow-Headers',
-      'Content-Type, Authorization, Content-Length, X-Requested-With, X-Redmine-API-Key, X-On-Behalf-Of',
+      'Content-Type, Authorization, Content-Length, X-Requested-With, X-Redmine-API-Key, X-On-Behalf-Of, __RequestVerificationToken',
     );
 
     res.sendStatus(200);
