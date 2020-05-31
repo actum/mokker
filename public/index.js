@@ -1,2 +1,618 @@
-"use strict";var _typeof="function"==typeof Symbol&&"symbol"==typeof Symbol.iterator?function(e){return typeof e}:function(e){return e&&"function"==typeof Symbol&&e.constructor===Symbol&&e!==Symbol.prototype?"symbol":typeof e},toConsumableArray=function(e){if(Array.isArray(e)){for(var r=0,t=Array(e.length);r<e.length;r++)t[r]=e[r];return t}return Array.from(e)},queryString=require("query-string"),transformToTernary=function(e){var r=e;return"@m_result"in e||(r={"@m_result":e,"@m_docs":{merged:{},objs:[]}}),r},getObj=function(e,r){return e["@m_docs"].objs.length||r["@m_docs"].objs.length?e["@m_docs"].objs.length?r["@m_docs"].objs.length?[].concat(e["@m_docs"].objs,r["@m_docs"].objs):[].concat(r["@m_result"],e["@m_docs"].objs):[].concat(e["@m_result"],r["@m_docs"].objs):[].concat(e["@m_result"],r["@m_result"])},getHostQuery=function(e){var r=void 0,t=e.headers.referer||e.url,o=t.indexOf("?");if(-1===r)r={};else{var n=t.slice(o);r=queryString.parse(n)}return r},ternary=function(e){var r=e.condition,t=e.iftrue,o=e.iffalse,n=transformToTernary(t),s=transformToTernary(o);return{"@m_result":r?n["@m_result"]:s["@m_result"],"@m_docs":{merged:Object.assign({},n["@m_result"],s["@m_result"],n["@m_docs"].merged,s["@m_docs"].merged),objs:getObj(n,s)}}},controllerProvider=function(e,r){return function(t,o){var n=void 0===e?"undefined":_typeof(e),s={};if("function"===n){var a=t.body,c=t.params,u=t.query,i=getHostQuery(t),l=e({body:a,params:c,query:u,hostQuery:i},t,o);s="@m_result"in l?l["@m_result"]:l}else{if("object"!==n||Array.isArray(e))throw new Error("Unacceptable type of controller: "+n+". It must be 'object' or 'function'.");s=e}setTimeout(function(){return o.json(s)},r)}},Router=require("express").Router();Router.use(function(e,r,t){r.header("Access-Control-Allow-Origin","*"),r.header("Access-Control-Allow-Headers","X-Requested-With"),t()});var createRouter=function(e){return e.forEach(function(e){var r=e.method.toLowerCase(),t=e.controller||e.json,o=e.delay||0;try{Router[r](e.url,controllerProvider(t,o))}catch(e){throw new Error(r+" is a wrong method")}}),Router};function parseObject(e){var r={};return Object.keys(e).forEach(function(t){var o=e[t],n=void 0===o?"undefined":_typeof(o);Array.isArray(o)?n=parseArray(o):null===o?n="null":"object"===n&&(n=parseObject(o)),r[t]=n}),r}function parseArray(e){var r=e[0];return r?Array.isArray(r)?parseArray(r)+"[]":"object"===(void 0===r?"undefined":_typeof(r))?[parseObject(r)]:(void 0===r?"undefined":_typeof(r))+"[]":"[]"}var isPropMandatory=function(e,r,t){var o=!1;return e.includes("null")||e.includes("undefined")?o=!1:r===t&&(o=!0),o},getMandatoryFlag=function(e){var r=e.types,t=e.matches,o=e.possibleMatches,n=e.flagIfYes,s=e.flagIfNo;return isPropMandatory(r,t,o)?n:s},findTypesObjects=function(e){return e.filter(function(e){return"object"===(void 0===e?"undefined":_typeof(e))})},findTypesNoObjects=function(e){return e.filter(function(e){return"object"!==(void 0===e?"undefined":_typeof(e))})},generateTypesWithMergedObjects=function(e){var r=findTypesObjects(e),t=e;if(r.length>1){var o=getJSONFromTernary({objs:r,merged:Object.assign.apply(Object,[{}].concat(toConsumableArray(r)))});t=[].concat(findTypesNoObjects(e),o)}return t},generateJSONValue=function(e){var r="",t=generateTypesWithMergedObjects(e).filter(function(e){return"undefined"!==e&&"null"!==e});return t.forEach(function(e,o){"object"===(void 0===e?"undefined":_typeof(e))?r+=""+JSON.stringify(e,null,2):r+=""+e,o<t.length-1&&(r+=" | ")}),r},parseStringifiedObject=function e(r){var t={};return Object.keys(r).forEach(function(o){var n=r[o];if("string"===(void 0===n?"undefined":_typeof(n)))try{var s=JSON.parse(n);"object"===(void 0===s?"undefined":_typeof(s))?t[o]=e(s):t[o]=n}catch(e){t[o]=n}else t[o]=n}),t[0]?[t[0]]:t};function getJSONFromTernary(e){var r=e.merged,t=e.objs,o={};return Object.keys(r).forEach(function(e){var r=0,n=[];t.forEach(function(t){if(e in t){var o=t[e];r+=1;var s=void 0===o?"undefined":_typeof(o);Array.isArray(o)?s=parseArray(o):null===o?s="null":"object"===(void 0===o?"undefined":_typeof(o))&&(s=parseObject(o)),n.includes(s)||n.push(s)}});var s=""+getMandatoryFlag({types:n,matches:r,possibleMatches:t.length,flagIfYes:"",flagIfNo:"?"})+e,a=generateJSONValue(n);o[s]=a}),parseStringifiedObject(o)}var getParamsFromUrl=function(e){var r={};return e.split("?")[0].split("/").filter(function(e){return e.includes(":")}).forEach(function(e){r[e.replace(":","")]=""}),r},getDataFromArray=function(e){var r={};return e.forEach(function(e){r[e]=""}),r},getArrayOfJSON=function(e){return JSON.stringify(e,null,2).replace(/\\"/g,"'").replace(/\\n/g,"\n  ").split("\n")},generateDocsFromArray=function(e){var r={language:"js",content:[]};return getArrayOfJSON(e).forEach(function(e){return r.content.push(e)}),r},generateDocsFromObject=function(e,r){var t=arguments.length>2&&void 0!==arguments[2]?arguments[2]:[],o=arguments.length>3&&void 0!==arguments[3]?arguments[3]:[],n=arguments.length>4&&void 0!==arguments[4]?arguments[4]:"",s={language:"js",content:[]},a=void 0;if(Array.isArray(e))a="["+parseObject(e)+"]";else if("object"===(void 0===e?"undefined":_typeof(e)))a=parseObject(e);else{var c=e({body:r,params:getParamsFromUrl(n),query:getDataFromArray(o),hostQuery:getDataFromArray(t)});a="@m_docs"in c?getJSONFromTernary(c["@m_docs"]):parseObject(c)}return getArrayOfJSON(a).forEach(function(e){return s.content.push(e)}),s},getFileName=function(e){return e.toLocaleLowerCase().replace(new RegExp(" ","g"),"-")+".md"},generateDocumentation=function(e){var r=e.docs,t=[];return t.push({h1:r.title}),r.description&&t.push({blockquote:r.description}),t.push({h2:"Method"}),t.push({p:e.method.toLocaleUpperCase()}),t.push({h2:"URL"}),t.push({code:{language:"js",content:[e.url.split("?")[0]]}}),r.hostQuery&&(t.push({h2:"Host Query Parameters"}),t.push({blockquote:"For mock development"}),t.push({code:generateDocsFromArray(r.hostQuery)})),r.query&&(t.push({h2:"Query Parameters"}),t.push({code:generateDocsFromArray(r.query)})),r.body&&(t.push({h2:"Body"}),t.push({code:generateDocsFromObject(r.body)})),e.json?(t.push({h2:"Response"}),t.push({code:generateDocsFromObject(e.json)})):e.controller&&(t.push({h2:"Response"}),t.push({code:generateDocsFromObject(e.controller,r.body,r.hostQuery,r.query,e.url)})),{fileName:getFileName(r.fileName||r.title),fileContent:t}},bodyParser=require("body-parser"),express=require("express"),morgan=require("morgan"),_require=require("react-dev-utils/WebpackDevServerUtils"),choosePort=_require.choosePort,json2md=require("json2md"),fs=require("fs"),path=require("path"),colors=require("colors"),app=express();app.use(bodyParser.json()),app.use(morgan("dev")),app.use(function(e,r,t){"OPTIONS"===e.method?(r.header("Access-Control-Allow-Origin","*"),r.header("Access-Control-Allow-Methods","GET, PUT, POST, DELETE, OPTIONS, PATCH"),r.header("Access-Control-Allow-Headers","Content-Type, Authorization, Content-Length, X-Requested-With, X-Redmine-API-Key, X-On-Behalf-Of, __RequestVerificationToken"),r.sendStatus(200)):t()});var writeFiles=function(e,r){fs.writeFile(e,json2md(r),function(r){r?console.log(r.red):console.log("📄 "+e)})},clearDocsFolder=function(e){try{var r=fs.readdirSync(e);Object.keys(r).forEach(function(t){var o=r[t];fs.unlinkSync(path.join(e,o))})}catch(r){"ENOENT"===r.code?console.log(("Cannot find the path: "+e).red):console.log(r)}},createDocs=function(e,r){var t=!1;e.forEach(function(e){if(e.docs){t||(clearDocsFolder(r),t=!0);var o=generateDocumentation(e),n=r+"/"+o.fileName;writeFiles(n,o.fileContent)}})},start=function(e){var r=e.routes,t=void 0===r?[]:r,o=e.defaultPort,n=void 0===o?3e3:o,s=e.docsUrl,a=void 0===s?path.resolve(process.cwd(),"docs"):s;app.use("/",createRouter(t)),choosePort("0.0.0.0",n).then(function(e){null!=e&&app.listen(e,function(){return console.log(("🚀 App started on port: "+e).green)})}),createDocs(t,a)};module.exports={start:start,ternary:ternary};
+'use strict';
+
+var _typeof = typeof Symbol === "function" && typeof Symbol.iterator === "symbol" ? function (obj) {
+  return typeof obj;
+} : function (obj) {
+  return obj && typeof Symbol === "function" && obj.constructor === Symbol && obj !== Symbol.prototype ? "symbol" : typeof obj;
+};
+
+var toConsumableArray = function (arr) {
+  if (Array.isArray(arr)) {
+    for (var i = 0, arr2 = Array(arr.length); i < arr.length; i++) arr2[i] = arr[i];
+
+    return arr2;
+  } else {
+    return Array.from(arr);
+  }
+};
+
+var queryString = require('query-string');
+
+var transformToTernary = function transformToTernary(obj) {
+  var ternaryObject = obj;
+
+  if (!('@m_result' in obj)) {
+    ternaryObject = {
+      '@m_result': obj,
+      '@m_docs': {
+        merged: {},
+        objs: []
+      }
+    };
+  }
+
+  return ternaryObject;
+};
+
+var getObj = function getObj(iftrueTernary, iffalseTernary) {
+  var result = void 0;
+  if (!iftrueTernary['@m_docs'].objs.length && !iffalseTernary['@m_docs'].objs.length) {
+    result = [].concat(iftrueTernary['@m_result'], iffalseTernary['@m_result']);
+  } else if (!iftrueTernary['@m_docs'].objs.length) {
+    result = [].concat(iftrueTernary['@m_result'], iffalseTernary['@m_docs'].objs);
+  } else if (!iffalseTernary['@m_docs'].objs.length) {
+    result = [].concat(iffalseTernary['@m_result'], iftrueTernary['@m_docs'].objs);
+  } else {
+    result = [].concat(iftrueTernary['@m_docs'].objs, iffalseTernary['@m_docs'].objs);
+  }
+
+  return result;
+};
+
+var getHostQuery = function getHostQuery(req) {
+  var hostQuery = void 0;
+  var host = req.headers.referer || req.url;
+  var index = host.indexOf('?');
+
+  if (hostQuery === -1) {
+    hostQuery = {};
+  } else {
+    var formatedHost = host.slice(index);
+    hostQuery = queryString.parse(formatedHost);
+  }
+
+  return hostQuery;
+};
+
+var ternary = function ternary(_ref) {
+  var condition = _ref.condition,
+      iftrue = _ref.iftrue,
+      iffalse = _ref.iffalse;
+
+  var iftrueTernary = transformToTernary(iftrue);
+  var iffalseTernary = transformToTernary(iffalse);
+
+  var result = condition ? iftrueTernary['@m_result'] : iffalseTernary['@m_result'];
+  var merged = Object.assign({}, iftrueTernary['@m_result'], iffalseTernary['@m_result'], iftrueTernary['@m_docs'].merged, iffalseTernary['@m_docs'].merged);
+  var objs = getObj(iftrueTernary, iffalseTernary);
+
+  return {
+    '@m_result': result,
+    '@m_docs': {
+      merged: merged,
+      objs: objs
+    }
+  };
+};
+
+var controllerProvider = (function (customContoller, delay) {
+  return function (req, res) {
+    var typeofCustomController = typeof customContoller === 'undefined' ? 'undefined' : _typeof(customContoller);
+    var response = {};
+
+    if (typeofCustomController === 'function') {
+      var body = req.body,
+          params = req.params,
+          query = req.query;
+
+
+      var hostQuery = getHostQuery(req);
+
+      var data = {
+        body: body,
+        params: params,
+        query: query,
+        hostQuery: hostQuery
+      };
+
+      var result = customContoller(data, req, res);
+      response = '@m_result' in result ? result['@m_result'] : result;
+    } else if (typeofCustomController === 'object' && !Array.isArray(customContoller)) {
+      response = customContoller;
+    } else {
+      throw new Error('Unacceptable type of controller: ' + typeofCustomController + '. It must be \'object\' or \'function\'.');
+    }
+
+    setTimeout(function () {
+      return res.json(response);
+    }, delay);
+  };
+});
+
+var Router = require('express').Router();
+
+Router.use(function (req, res, next) {
+  res.header('Access-Control-Allow-Origin', '*');
+  res.header('Access-Control-Allow-Headers', 'X-Requested-With');
+  next();
+});
+
+var createRouter = (function (routes) {
+  routes.forEach(function (route) {
+    var formatedMethod = route.method.toLowerCase();
+
+    var controller = route.controller || route.json;
+    var delay = route.delay || 0;
+
+    try {
+      Router[formatedMethod](route.url, controllerProvider(controller, delay));
+    } catch (e) {
+      throw new Error(formatedMethod + ' is a wrong method');
+    }
+  });
+
+  return Router;
+});
+
+function parseObject(obj) {
+  var parsedObject = {};
+  Object.keys(obj).forEach(function (key) {
+    var value = obj[key];
+    var type = typeof value === 'undefined' ? 'undefined' : _typeof(value);
+
+    if (Array.isArray(value)) {
+      type = parseArray(value); // eslint-disable-line
+    } else if (value === null) {
+      type = 'null';
+    } else if (type === 'object') {
+      type = parseObject(value);
+    }
+
+    parsedObject[key] = type;
+  });
+
+  return parsedObject;
+}
+
+function parseArray(arr) {
+  var parsedArray = void 0;
+  var firstItem = arr[0];
+
+  if (!firstItem) {
+    parsedArray = '[]';
+  } else if (Array.isArray(firstItem)) {
+    parsedArray = parseArray(firstItem) + '[]';
+  } else if ((typeof firstItem === 'undefined' ? 'undefined' : _typeof(firstItem)) === 'object') {
+    parsedArray = [parseObject(firstItem)];
+  } else {
+    parsedArray = (typeof firstItem === 'undefined' ? 'undefined' : _typeof(firstItem)) + '[]';
+  }
+
+  return parsedArray;
+}
+
+var isPropMandatory = function isPropMandatory(types, matches, possibleMatches) {
+  var isMandatory = false;
+
+  if (types.includes('null') || types.includes('undefined')) {
+    isMandatory = false;
+  } else if (matches === possibleMatches) {
+    isMandatory = true;
+  }
+
+  return isMandatory;
+};
+
+var getMandatoryFlag = function getMandatoryFlag(_ref) {
+  var types = _ref.types,
+      matches = _ref.matches,
+      possibleMatches = _ref.possibleMatches,
+      flagIfYes = _ref.flagIfYes,
+      flagIfNo = _ref.flagIfNo;
+  return isPropMandatory(types, matches, possibleMatches) ? flagIfYes : flagIfNo;
+};
+
+var findTypesObjects = function findTypesObjects(types) {
+  return types.filter(function (type) {
+    return (typeof type === 'undefined' ? 'undefined' : _typeof(type)) === 'object';
+  });
+};
+var findTypesNoObjects = function findTypesNoObjects(types) {
+  return types.filter(function (type) {
+    return (typeof type === 'undefined' ? 'undefined' : _typeof(type)) !== 'object';
+  });
+};
+
+var generateTypesWithMergedObjects = function generateTypesWithMergedObjects(types) {
+  var typesObjects = findTypesObjects(types);
+  var typesWithMergedObjects = types;
+
+  if (typesObjects.length > 1) {
+    var merged = Object.assign.apply(Object, [{}].concat(toConsumableArray(typesObjects)));
+
+    var JSONFromTernary = getJSONFromTernary({ // eslint-disable-line
+      objs: typesObjects,
+      merged: merged
+    });
+
+    typesWithMergedObjects = [].concat(findTypesNoObjects(types), JSONFromTernary);
+  }
+
+  return typesWithMergedObjects;
+};
+
+var generateJSONValue = function generateJSONValue(types) {
+  var JSONValue = '';
+
+  var typesWithMergedObject = generateTypesWithMergedObjects(types);
+
+  var typesWithoutNullAndUndef = typesWithMergedObject.filter(function (type) {
+    return type !== 'undefined' && type !== 'null';
+  });
+
+  typesWithoutNullAndUndef.forEach(function (item, index) {
+    if ((typeof item === 'undefined' ? 'undefined' : _typeof(item)) === 'object') {
+      JSONValue += '' + JSON.stringify(item, null, 2);
+    } else {
+      JSONValue += '' + item;
+    }
+
+    if (index < typesWithoutNullAndUndef.length - 1) JSONValue += ' | ';
+  });
+
+  return JSONValue;
+};
+
+var parseStringifiedObject = function parseStringifiedObject(stringifiedObject) {
+  var parsedObject = {};
+  Object.keys(stringifiedObject).forEach(function (key) {
+    var value = stringifiedObject[key];
+
+    var type = typeof value === 'undefined' ? 'undefined' : _typeof(value);
+
+    if (type === 'string') {
+      try {
+        var parsed = JSON.parse(value);
+        if ((typeof parsed === 'undefined' ? 'undefined' : _typeof(parsed)) === 'object') {
+          parsedObject[key] = parseStringifiedObject(parsed);
+        } else {
+          parsedObject[key] = value;
+        }
+      } catch (e) {
+        parsedObject[key] = value;
+      }
+    } else {
+      parsedObject[key] = value;
+    }
+  });
+
+  if (parsedObject[0]) return [parsedObject[0]];
+
+  return parsedObject;
+};
+
+function getJSONFromTernary(ternaryObject) {
+  var merged = ternaryObject.merged,
+      objs = ternaryObject.objs;
+
+  var mergedKeys = Object.keys(merged);
+
+  var stringifiedObject = {};
+
+  mergedKeys.forEach(function (key) {
+    var matches = 0;
+    var types = [];
+
+    objs.forEach(function (obj) {
+      if (key in obj) {
+        var value = obj[key];
+        matches += 1;
+        var type = typeof value === 'undefined' ? 'undefined' : _typeof(value);
+
+        if (Array.isArray(value)) {
+          type = parseArray(value);
+        } else if (value === null) {
+          type = 'null';
+        } else if ((typeof value === 'undefined' ? 'undefined' : _typeof(value)) === 'object') {
+          type = parseObject(value);
+        }
+
+        if (!types.includes(type)) types.push(type);
+      }
+    });
+
+    var mandatoryFlag = getMandatoryFlag({
+      types: types,
+      matches: matches,
+      possibleMatches: objs.length,
+      flagIfYes: '',
+      flagIfNo: '?'
+    });
+    var JSONKey = '' + mandatoryFlag + key;
+    var JSONValue = generateJSONValue(types);
+
+    stringifiedObject[JSONKey] = JSONValue;
+  });
+
+  var JSONFromTernary = parseStringifiedObject(stringifiedObject);
+
+  return JSONFromTernary;
+}
+
+var getParamsFromUrl = function getParamsFromUrl(url) {
+  var paramsFromUrl = {};
+  url.split('?')[0].split('/').filter(function (item) {
+    return item.includes(':');
+  }).forEach(function (param) {
+    paramsFromUrl[param.replace(':', '')] = '';
+  }); // all route params are strings
+
+  return paramsFromUrl;
+};
+
+var getDataFromArray = function getDataFromArray(array) {
+  var data = {};
+  array.forEach(function (item) {
+    data[item] = '';
+  });
+  return data;
+};
+
+var getArrayOfJSON = function getArrayOfJSON(json) {
+  var string = JSON.stringify(json, null, 2).replace(/\\"/g, "'").replace(/\\n/g, '\n  ');
+
+  var array = string.split('\n');
+
+  return array;
+};
+
+var generateDocsFromArray = function generateDocsFromArray(array) {
+  var docs = {
+    language: 'js',
+    content: []
+  };
+
+  getArrayOfJSON(array).forEach(function (item) {
+    return docs.content.push(item);
+  });
+
+  return docs;
+};
+
+var generateDocsFromObject = function generateDocsFromObject(response, body) {
+  var hostQuery = arguments.length > 2 && arguments[2] !== undefined ? arguments[2] : [];
+  var queryArray = arguments.length > 3 && arguments[3] !== undefined ? arguments[3] : [];
+  var url = arguments.length > 4 && arguments[4] !== undefined ? arguments[4] : '';
+
+  var docs = {
+    language: 'js',
+    content: []
+  };
+
+  var json = void 0;
+
+  if (Array.isArray(response)) {
+    json = '[' + parseObject(response) + ']';
+  } else if ((typeof response === 'undefined' ? 'undefined' : _typeof(response)) === 'object') {
+    json = parseObject(response);
+  } else {
+    var responseJSON = response({
+      body: body,
+      params: getParamsFromUrl(url),
+      query: getDataFromArray(queryArray),
+      hostQuery: getDataFromArray(hostQuery)
+    });
+
+    if ('@m_docs' in responseJSON) {
+      json = getJSONFromTernary(responseJSON['@m_docs']);
+    } else {
+      json = parseObject(responseJSON);
+    }
+  }
+
+  getArrayOfJSON(json).forEach(function (item) {
+    return docs.content.push(item);
+  });
+
+  return docs;
+};
+
+var getFileName = function getFileName(fileName) {
+  return fileName.toLocaleLowerCase().replace(new RegExp(' ', 'g'), '-') + '.md';
+};
+
+var generateDocumentation = (function (route) {
+  var docs = route.docs;
+
+  var fileContent = [];
+
+  fileContent.push({
+    h1: docs.title
+  });
+
+  if (docs.description) {
+    fileContent.push({
+      blockquote: docs.description
+    });
+  }
+
+  fileContent.push({
+    h2: 'Method'
+  });
+
+  fileContent.push({
+    p: route.method.toLocaleUpperCase()
+  });
+
+  fileContent.push({
+    h2: 'URL'
+  });
+
+  fileContent.push({
+    code: {
+      language: 'js',
+      content: [route.url.split('?')[0]] // ignore query params
+    }
+  });
+
+  if (docs.hostQuery) {
+    fileContent.push({
+      h2: 'Host Query Parameters'
+    });
+    fileContent.push({
+      blockquote: 'For mock development'
+    });
+    fileContent.push({
+      code: generateDocsFromArray(docs.hostQuery)
+    });
+  }
+
+  if (docs.query) {
+    fileContent.push({
+      h2: 'Query Parameters'
+    });
+    fileContent.push({
+      code: generateDocsFromArray(docs.query)
+    });
+  }
+
+  if (docs.body) {
+    fileContent.push({
+      h2: 'Body'
+    });
+    fileContent.push({
+      code: generateDocsFromObject(docs.body)
+    });
+  }
+
+  if (route.json) {
+    fileContent.push({
+      h2: 'Response'
+    });
+    fileContent.push({
+      code: generateDocsFromObject(route.json)
+    });
+  } else if (route.controller) {
+    fileContent.push({
+      h2: 'Response'
+    });
+    fileContent.push({
+      code: generateDocsFromObject(route.controller, docs.body, docs.hostQuery, docs.query, route.url) // eslint-disable-line
+    });
+  }
+
+  var fileName = getFileName(docs.fileName || docs.title);
+
+  return {
+    fileName: fileName,
+    fileContent: fileContent
+  };
+});
+
+var bodyParser = require('body-parser');
+var express = require('express');
+var morgan = require('morgan');
+
+var _require = require('react-dev-utils/WebpackDevServerUtils'),
+    choosePort = _require.choosePort;
+
+var json2md = require('json2md');
+var fs = require('fs');
+var path = require('path');
+var colors = require('colors'); // eslint-disable-line no-unused-vars
+
+var app = express();
+
+app.use(bodyParser.json());
+app.use(morgan('dev'));
+
+var requestHeaders = {
+  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Methods': 'GET, PUT, POST, DELETE, OPTIONS, PATCH',
+  'Access-Control-Allow-Headers': 'Content-Type, Authorization, Content-Length, X-Requested-With, X-Redmine-API-Key, X-On-Behalf-Of'
+};
+
+/**
+* @param {Object<[key: string]: string>} headers
+* @returns void
+*/
+var setupHeaders = function setupHeaders(headers) {
+  app.use(function (req, res, next) {
+    if (req.method === 'OPTIONS') {
+      var headersArray = Object.keys(headers);
+
+      if (headersArray.length) {
+        headersArray.forEach(function (headerID) {
+          res.header(headerID, headers[headerID]);
+        });
+      }
+
+      res.sendStatus(200);
+    } else {
+      next();
+    }
+  });
+};
+
+var writeFiles = function writeFiles(url, fileContent) {
+  fs.writeFile(url, json2md(fileContent), function (err) {
+    if (err) {
+      console.log(err.red); // eslint-disable-line no-console
+    } else {
+      console.log('\uD83D\uDCC4 ' + url); // eslint-disable-line no-console
+    }
+  });
+};
+
+var clearDocsFolder = function clearDocsFolder(docsUrl) {
+  try {
+    var files = fs.readdirSync(docsUrl);
+    Object.keys(files).forEach(function (key) {
+      var file = files[key];
+      fs.unlinkSync(path.join(docsUrl, file));
+    });
+  } catch (err) {
+    if (err.code === 'ENOENT') {
+      console.log(('Cannot find the path: ' + docsUrl).red); // eslint-disable-line no-console
+    } else {
+      console.log(err); // eslint-disable-line no-console
+    }
+  }
+};
+
+var createDocs = function createDocs(routes, docsUrl) {
+  var docsFolderCleared = false;
+  routes.forEach(function (route) {
+    if (route.docs) {
+      if (!docsFolderCleared) {
+        clearDocsFolder(docsUrl);
+        docsFolderCleared = true;
+      }
+
+      var documentation = generateDocumentation(route);
+      var url = docsUrl + '/' + documentation.fileName;
+
+      writeFiles(url, documentation.fileContent);
+    }
+  });
+};
+
+var start = function start(_ref) {
+  var _ref$routes = _ref.routes,
+      routes = _ref$routes === undefined ? [] : _ref$routes,
+      _ref$defaultPort = _ref.defaultPort,
+      defaultPort = _ref$defaultPort === undefined ? 3000 : _ref$defaultPort,
+      _ref$docsUrl = _ref.docsUrl,
+      docsUrl = _ref$docsUrl === undefined ? path.resolve(process.cwd(), 'docs') : _ref$docsUrl,
+      _ref$headers = _ref.headers,
+      headers = _ref$headers === undefined ? requestHeaders : _ref$headers;
+
+  setupHeaders(headers);
+
+  app.use('/', createRouter(routes));
+  choosePort('0.0.0.0', defaultPort).then(function (port) {
+    if (port == null) return;
+    app.listen(port, function () {
+      return console.log(('\uD83D\uDE80 App started on port: ' + port).green);
+    }); // eslint-disable-line no-console
+  });
+
+  createDocs(routes, docsUrl);
+};
+
+module.exports = {
+  requestHeaders: requestHeaders,
+  start: start,
+  ternary: ternary
+};
 //# sourceMappingURL=index.js.map

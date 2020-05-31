@@ -78,6 +78,37 @@ mokker.start({ routes });
 }
 ```
 
+## Custom request headers
+
+```
+// server.js
+const mokker = require('mokker');
+
+const routes = [{
+    method: 'get',
+    url: '/api',
+    json: { is: 'done' }
+}];
+
+mokker.start({
+  routes,
+  headers: {
+    ...mokker.requestHeaders,
+    'Access-Control-Allow-Headers': 'MyCustomHeader'
+  }
+});
+
+// app.js
+fetch('http://localhost:3000/api', {
+	method: 'get'
+});
+
+// response
+{
+	"is": "done"
+}
+```
+
 ## The documented request
 
 ### Source code

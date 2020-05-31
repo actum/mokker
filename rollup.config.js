@@ -19,7 +19,7 @@ export default {
     format: 'cjs'
   },
   plugins: [
-    eslint(eslintConfig),
+    eslint({ ...eslintConfig, fix: true }),
     babel({
       exclude: 'node_modules/**'
     }),
